@@ -1,0 +1,11 @@
+Using HID for Node
+
+
+vendorId: 8483,
+productId: 4112,
+path: 'USB_2123_1010_fd131200',
+serialNumber: '',
+manufacturer: 'Syntek',
+product: 'USB Missile Launcher',
+release: 1,
+interface: -1 
