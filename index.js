@@ -157,27 +157,29 @@ launcher
 .on('error', function(err) {
 	console.log('event: error: ', err);
 });
-
-
 launcher.read(function (err, data) {
 	console.log('read:', err, data);
 });
 
-methods.trigger('led', 1);
+// run commands
+methods.calibrate_1 = function () {
+	// calibrate test 1
+	// 6 sec to the right seems its all it needs
+	methods.trigger('led', 1);
+	methods.trigger('reset', 0);
+	methods.trigger('right', 6000);
+	methods.trigger('led', 0);
+};
+methods.test_1 = function () {
+	methods.trigger('led', 1);
+	methods.trigger('reset', 0);
+	methods.trigger('right', 3250);
+	methods.trigger('up', 540);
+	methods.trigger('fire', 2);
+	methods.trigger('led', 0);
+}
 
-// calibrate test 1
-// 6 sec to the right seems its all it needs
-methods.trigger('reset', 0);
-methods.trigger('right', 6000);
-
-// test 1
-//methods.trigger('reset', 0);
-///methods.trigger('right', 3250);
-//methods.trigger('up', 540);
-//methods.trigger('fire', 2);
-
-methods.trigger('led', 0);
+methods.test_1();
 
 //methods.add(function () { launcher.close(); });
-
 //console.log(devices);
