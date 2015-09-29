@@ -46,6 +46,14 @@ jQuery(function ($) {
 				}				
 				$roster.append($entry);
 			})
+			.on('removed', function (data) {
+				console.log('event: removed:', data);
+				if (!data) {
+					console.log('event: removed: no data found');
+					return;
+				}
+				$roster.find('#' + data.uid).remove();
+			})
 			.on('announce', function (name) {
 				console.log('event: announcement:', name);
 			})

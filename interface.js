@@ -1,4 +1,4 @@
-var launcher = require('./index');
+var launcher = require('./launcher');
 var express = require('express');
 var app = express();
 var connect = require('connect');
@@ -163,6 +163,9 @@ var methods = {
 	demote : function (socket, cause) {
 		cause = !cause ? 0 : cause;
 		socket.emit('demoted', { code : cause });
+		// remove socket
+		delete socket_map[socket.id];
+		socket.disconnect();
 	},
 	move : function (cmd) {
 		launcher.move(cmd, options.move_rate);
