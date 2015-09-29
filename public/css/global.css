@@ -1,0 +1,53 @@
+
+.section {
+	display: none;
+}
+
+#section-intro {
+	display: block;
+}
+	#section-intro .container {
+		text-align: center;
+	}
+	#section-intro.disabled .form-container {
+		display: none;
+	}
+	#section-intro .roster-container {
+		padding-top: 20px;
+	}
+	#section-intro .roster {
+		list-style: none;
+	}
+	#section-intro .roster .template {
+		display: none;
+	}
+	#section-intro .roster .self {
+		color: #f00;
+	}
+#section-interface.enabled {
+	display: block;
+}
+	#section-interface .container {
+		position: relative;
+	}
+	#section-interface .status {
+		position: absolute;
+		left: 15px;
+		top: 0px;
+		width: 40px;
+		height: 40px;
+		background-color: #f00;
+	}
+	#section-interface.on .status {
+		width: 40px;
+		height: 40px;
+		background-color: #0f0;
+	}
+	
+	#section-interface #camera-container {
+		height: 600px;
+		background-color: #888;
+	}
+	#section-interface .controls-container {
+		padding: 20px;
+	}

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<title>Interface</title>
+	<meta name="generator" content="BBEdit 11.1" />
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/global.css">
+	<script src="https://code.jquery.com/jquery-1.10.0.js"></script>
+	<script src="https://cdn.socket.io/socket.io-1.3.5.js"></script>
+	<script src="js/global.js"></script>
+</head>
+<body>
+	<div id="site_container">
+		
+		<div class="section" id="section-intro">
+			<div class="jumbotron">
+				<div class="container">
+					<h2>Welcome to the JohnCam</h2>
+					<div class="form-container">
+						<form class="form-inline">
+							<div class="form-group">
+								<label class="sr-only" for="userName">Amount (in dollars)</label>
+								<div class="input-group">
+									<div class="input-group-addon"><span class="glyphicon glyphicon-user" aria-hidden="true"></span></div>
+									<input type="text" class="form-control" id="userName" placeholder="Name">
+								</div>
+							</div>
+							<button type="submit" class="btn btn-primary">Line up</button>
+						</form>
+					</div>
+					<div class="roster-container">
+						<ul class="roster">
+							<li class="template">Name here</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<div class="section" id="section-interface">
+			<div class="jumbotron">
+				<div class="container">
+					<div class="status"></div>
+					
+					<div id="camera-container">
+						
+					</div>
+					
+					<div class="controls-container">
+						<span class="control left"><button data-cmd="left" class="btn btn-primary">left</button></span>
+						<span class="control right"><button data-cmd="right" class="btn btn-primary">right</button></span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

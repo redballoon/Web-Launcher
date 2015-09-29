@@ -2,6 +2,7 @@ var HID = require('./node-hid/');
 var devices = HID.devices();
 
 var options = {
+	debug : false,
 	// update - depends on the machine
 	usb_path : 'USB_2123_1010_fd131200',
 	// delay before firing
@@ -11,7 +12,8 @@ var options = {
 	reset_left_delay : 8000,
 	reset_down_delay : 2000,
 	state : {
-		transition : false
+		transition : false,
+		online : false
 	}
 };
 var launcher = null;
@@ -26,6 +28,7 @@ var commands = {
 	off : 0x00
 };
 var command_stack = [];
+var allowed_move_cmd = ['left', 'up', 'right', 'down'];
 var methods = {
 	empty_set : function (length) {
 		var list = [], i;
@@ -179,7 +182,58 @@ methods.test_1 = function () {
 	methods.trigger('led', 0);
 }
 
-methods.test_1();
+module.exports = {
+	busy : function () {
+		return options.state.transition;
+	},
+	on : function () {
+		if (options.state.online) {
+			console.log('launcher: on: already on');
+			return;
+		}
+		
+		options.state.online = true;
+		methods.trigger('led', 1);
+	},
+	off : function () {
+		if (!options.state.online) {
+			console.log('launcher: off: already off');
+			return;
+		}
+		options.state.online = false;
+		methods.trigger('led', 0);
+	},
+	cancel : function (callback) {
+		if (!options.state.online) {
+			console.log('launcher: cancel: must be on');
+			return;
+		}
+		methods.add(callback);
+	},
+	move : function (cmd, value) {
+		if (!options.state.online) {
+			console.log('launcher: move: must be on');
+			return;
+		}
+		var flag = false;
+		allowed_move_cmd.map(function (value) {
+			if (!flag) flag = value === cmd;
+		});
+		if (!flag) {
+			console.log('launcher: cmd not allowed');
+			return;
+		}
+		methods.trigger(cmd, value);
+	},
+	fire : function () {
+		if (!options.state.online) {
+			console.log('launcher: fire: must be on');
+			return;
+		}
+	}
+};
+
+//methods.test_1();
 
 //methods.add(function () { launcher.close(); });
 //console.log(devices);
