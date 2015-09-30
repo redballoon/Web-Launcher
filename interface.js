@@ -1,4 +1,18 @@
-var launcher = require('./launcher');
+var launcher = {
+	busy : function () {
+		return false;
+	},
+	on : function () {
+	},
+	off : function () {
+	},
+	cancel : function (callback) {
+	},
+	move : function (cmd, value) {
+	},
+	fire : function () {
+	}
+};//require('./launcher');
 var express = require('express');
 var app = express();
 var connect = require('connect');
@@ -6,6 +20,7 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
 var options = {
+	debug : true,
 	port : 3000,
 	move_rate : 500,
 	status : {
@@ -18,13 +33,13 @@ var socket_map = {};
 var socket_queue = [];
 var current_king = '';
 var inactive_timer = null;
-var inactive_delay = 10000;
+var inactive_delay = 60000;
 
 var methods = {
 	inactive : function () {
-		console.log('inactive: timer up');
+		if (options.debug) console.log('inactive: timer up');
 		if (!current_king) {
-			console.log('inactive: no king set');
+			if (options.debug) console.log('inactive: no king set');
 			return;
 		}
 		methods.demote(socket_map[current_king].socket);
@@ -32,7 +47,7 @@ var methods = {
 	},
 	reset_timer : function () {
 		// check for inactivity
-		console.log('reset_timer');
+		if (options.debug) console.log('reset_timer');
 		
 		if (inactive_timer) {
 			clearTimeout(inactive_timer);
@@ -46,10 +61,10 @@ var methods = {
 		var id = socket.id;
 		
 		socket.on('disconnect', function () {
-			console.log('event: disconnection', id, arguments);
+			if (options.debug) console.log('event: disconnection', id, arguments);
 			
 			if (typeof socket_map[id] === 'undefined') {
-				console.log('user never registered');
+				if (options.debug) console.log('user never registered');
 				return;
 			}
 			
@@ -60,10 +75,12 @@ var methods = {
 			if (current_king === id) {
 				methods.next_king();
 			}
+			
+			// announce that you removed someone
 		});
 		
 		socket.on('register', function (data) {
-			console.log('event: register');
+			if (options.debug) console.log('event: register');
 			
 			// build current roster
 			var list = [];
@@ -104,19 +121,19 @@ var methods = {
 		return next_id;
 	},
 	next_king : function () {
-		console.log('next_king:');
+		if (options.debug) console.log('next_king:');
 		
 		if (options.transition) {
-			console.log('next_king: already waiting');
+			if (options.debug) console.log('next_king: already waiting');
 			return;
 		}
 		
 		// launcher
 		if (launcher.busy()) {
-			console.log('next_king: launcher is busy');
+			if (options.debug) console.log('next_king: launcher is busy');
 			options.transition = true;
 			launcher.cancel(function () {
-				console.log('next_king: cancel callback');
+				if (options.debug) console.log('next_king: cancel callback');
 				options.transition = false;
 				methods.next_king();
 			});
@@ -125,23 +142,30 @@ var methods = {
 		
 		var next_id = methods.fetch_king();
 		if (!next_id) {
-			console.log('next_king: no more connections');
+			if (options.debug) console.log('next_king: no more connections');
 			current_king = '';
 			// launcher
 			launcher.off();
 			return;
 		}
 		// log
-		console.log('next_king:', next_id);
+		if (options.debug) console.log('next_king:', next_id);
 		
+		if (socket_map[next_id] === 'undefined') {
+			if (options.debug) console.log('next_king: somehow lost socket');
+			current_king = '';
+			// launcher
+			launcher.off();
+			return;
+		}
 		var socket = socket_map[next_id].socket;
 		// must be unbinded on demoted
 		socket.on('move', function (data) {
 			if (socket.id !== current_king) {
-				console.log('event: move: not valid king', socket.id, current_king);
+				if (options.debug) console.log('event: move: not valid king', socket.id, current_king);
 				return;
 			}
-			console.log('event: move', data);
+			if (options.debug) console.log('event: move', data);
 			methods.reset_timer();
 			methods.move(data);
 		});
@@ -173,14 +197,24 @@ var methods = {
 };
 
 app.use(express.static(__dirname + '/public', { index : 'index.html' }));
-
+app.get('/stats', function (req, res) {
+	var count = 0;
+	for (var i = 0; i < socket_queue.length; i++) {
+		var id = socket_queue[i];
+		if (socket_map[id] !== 'undefined') {
+			count++;
+		}
+	}
+	if (current_king) count++;
+	res.send({ total : count });
+});
 io.on('connection', function (socket) {
-	console.log('event: connection', socket.id);
+	if (options.debug) console.log('event: connection', socket.id);
 	
 	methods.prepare(socket);
 });
 server = http.listen(options.port, function () {
-	console.log(server.address());
+	if (options.debug) console.log(server.address());
 });
 
 // app.get('/', function(req, res){

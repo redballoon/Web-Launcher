@@ -8,52 +8,115 @@
 	<link rel="stylesheet" href="css/global.css">
 	<script src="https://code.jquery.com/jquery-1.10.0.js"></script>
 	<script src="https://cdn.socket.io/socket.io-1.3.5.js"></script>
+	<script src="http://cdnjs.cloudflare.com/ajax/libs/gsap/latest/TweenMax.min.js"></script>
+	<script src="js/jquery.simpleCarousel.min.js"></script>
 	<script src="js/global.js"></script>
 </head>
 <body>
 	<div id="site_container">
 		
-		<div class="section" id="section-intro">
-			<div class="jumbotron">
-				<div class="container">
-					<h2>Welcome to the JohnCam</h2>
-					<div class="form-container">
-						<form class="form-inline">
-							<div class="form-group">
-								<label class="sr-only" for="userName">Amount (in dollars)</label>
-								<div class="input-group">
-									<div class="input-group-addon"><span class="glyphicon glyphicon-user" aria-hidden="true"></span></div>
-									<input type="text" class="form-control" id="userName" placeholder="Name">
+		<!-- BEGIN: Left Side -->
+		<div class="" id="left-panel">
+			<div class="wrapper">
+				<div class="section" id="section-stats">
+					<div class="jumbotron">
+						<div class="container">
+							<h2 class="total_users">0</h2>
+							<span class="glyphicon glyphicon-user" aria-hidden="true"></span>
+							
+							<div class="roster-container">
+								<ul class="roster list-group">
+									<li class="template list-group-item">Name here</li>
+								</ul>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- END: Left Side -->
+		
+		<!-- BEGIN: Right Side -->
+		<div class="carousel" id="right-panel">
+			<div class="carousel_wrapper">
+				<!-- BEGIN: Section - Instruction -->
+				<div class="section carousel_slide" id="section-instruction">
+					<div class="jumbotron">
+						<div class="container">
+							<h1>Welcome to the JohnCam</h1>
+							
+							<div class="container-fluid">
+								<div class="row">
+									<div class="col-xs-4 col-md-4">
+										<h2>Step 1</h2>
+										<h3>The Queue</h3>
+										<p>Type in a nickname and join the queue</p>
+									</div>
+									<div class="col-xs-4 col-md-4">
+										<h2>Step 2</h2>
+										<h3>The Waiting</h3>
+										<p>Now you will have to wait for your turn. The top left square will be red while you are offline</p>
+									</div>
+									<div class="col-xs-4 col-md-4">
+										<h2>Step 3</h2>
+										<h3>The Spotlight</h3>
+										<p>It's your turn! Move the rocket and fire it!</p>
+									</div>
+								</div>
+								<div class="row next-wrapper">
+									<button class="next-btn btn btn-block btn-primary">Next</button>
 								</div>
 							</div>
-							<button type="submit" class="btn btn-primary">Line up</button>
-						</form>
-					</div>
-					<div class="roster-container">
-						<ul class="roster">
-							<li class="template">Name here</li>
-						</ul>
+						</div>
 					</div>
 				</div>
-			</div>
-		</div>
-		
-		<div class="section" id="section-interface">
-			<div class="jumbotron">
-				<div class="container">
-					<div class="status"></div>
-					
-					<div id="camera-container">
-						
+				<!-- END: Section - Instruction -->
+				
+				<!-- BEGIN: Section - Intro -->
+				<div class="section carousel_slide" id="section-intro">
+					<div class="wrapper">
+						<div class="jumbotron">
+						<div class="container">
+							<h2>Join the queue</h2>
+							<div class="form-container">
+								<form class="form-inline">
+									<div class="form-group">
+										<label class="sr-only" for="userName">Amount (in dollars)</label>
+										<div class="input-group">
+											<div class="input-group-addon"><span class="glyphicon glyphicon-user" aria-hidden="true"></span></div>
+											<input type="text" class="form-control" id="userName" placeholder="Name">
+										</div>
+									</div>
+									<button type="submit" class="btn btn-primary">Line up</button>
+								</form>
+							</div>
+						</div>
 					</div>
-					
-					<div class="controls-container">
-						<span class="control left"><button data-cmd="left" class="btn btn-primary">left</button></span>
-						<span class="control right"><button data-cmd="right" class="btn btn-primary">right</button></span>
 					</div>
 				</div>
+				<!-- END: Section - Intro -->
+				
+				<!-- BEGIN: Section - Interface -->
+				<div class="section carousel_slide" id="section-interface">
+					<div class="jumbotron">
+						<div class="container">
+							<div id="camera-container">	
+							</div>
+							<div class="status"></div>
+							<div class="controls-container">
+								<div class="control left"><button data-cmd="left" class="btn btn-primary">left</button></div>
+								<div class="control right"><button data-cmd="right" class="btn btn-primary">right</button></div>
+								<div class="control up"><button data-cmd="up" class="btn btn-primary">up</button></div>
+								<div class="control down"><button data-cmd="down" class="btn btn-primary">down</button></div>
+								<div class="control fire"><button data-cmd="fire" class="btn btn-primary">fire</button></div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<!-- END: Section - Interface -->
 			</div>
 		</div>
+		<!-- END: Right Side -->
 	</div>
 </body>
 </html>

@@ -51,13 +51,13 @@ var methods = {
 		return (data[2] = val) ? data : data;
 	},
 	led : function (mode) {
-		console.log('led:', mode);
+		if (options.debug) console.log('led:', mode);
 		var data = this.io_set(mode ? commands.on : commands.off);
 		//console.log(data);
 		launcher.write(data);
 	},
 	send : function (cmd) {
-		console.log('send:', cmd);
+		if (options.debug) console.log('send:', cmd);
 		var data = this.code_set(commands[cmd]);
 		//console.log(data);
 		launcher.write(data);
@@ -71,19 +71,19 @@ var methods = {
 		
 		var next = function () {
 			if (!command_stack.length) {
-				console.log('next: stack is empty');
+				if (options.debug) console.log('next: stack is empty');
 				options.state.transition = false;
 				return;
 			}
 			var fn = command_stack.shift();
-			console.log('next: checking stack');
+			if (options.debug) console.log('next: checking stack');
 			fn.call(null, next);
 		};
 		next();
 	},
 	sleep : function (delay) {
 		command_stack.push(function (next) {
-			console.log('sleep:');
+			if (options.debug) console.log('sleep:');
 			setTimeout(function () {
 				next();
 			}, delay);
@@ -96,14 +96,14 @@ var methods = {
 		});
 	},
 	move : function (cmd, delay) {
-		console.log('move: queue', cmd);
+		if (options.debug) console.log('move: queue', cmd);
 		
 		this.add(function () { methods.send(cmd); });
 		this.sleep(delay);
 		this.add(function () { methods.send('stop'); });
 	},
 	execute : function (cmd, value) {
-		console.log('execute: queue', cmd);
+		if (options.debug) console.log('execute: queue', cmd);
 		// io
 		if (cmd === 'led') {
 			this.add(function () { methods.led(value); });
@@ -123,10 +123,10 @@ var methods = {
 		}
 	},
 	trigger : function (cmd, value) {
-		console.log('trigger:', cmd);
+		if (options.debug) console.log('trigger:', cmd);
 		
 		if (launcher === null) {
-			console.log('trigger: launcher has not been initialized');
+			if (options.debug) console.log('trigger: launcher has not been initialized');
 			return;
 		}
 		
@@ -142,7 +142,7 @@ var methods = {
 			this.move(cmd, value);
 		// other
 		} else {
-			console.log('trigger: command is invalid', cmd);
+			if (options.debug) console.log('trigger: command is invalid', cmd);
 		}
 		
 		// start the command queue
@@ -155,13 +155,13 @@ launcher = new HID.HID(options.usb_path);
 // setup HID events
 launcher
 .on('data', function(data) {
-	console.log('event: reading: ', data);
+	if (options.debug) console.log('event: reading: ', data);
 })
 .on('error', function(err) {
-	console.log('event: error: ', err);
+	if (options.debug) console.log('event: error: ', err);
 });
 launcher.read(function (err, data) {
-	console.log('read:', err, data);
+	if (options.debug) console.log('read:', err, data);
 });
 
 // run commands
