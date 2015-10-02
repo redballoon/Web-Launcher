@@ -208,6 +208,9 @@ app.get('/stats', function (req, res) {
 	if (current_king) count++;
 	res.send({ total : count });
 });
+app.get('/shutdown', function (req, res) {
+	// close hardware
+});
 io.on('connection', function (socket) {
 	if (options.debug) console.log('event: connection', socket.id);
 	
