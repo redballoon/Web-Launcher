@@ -69,6 +69,18 @@ button:visited {
 	height: 100%;
 	width: 25%;
 }
+@media screen and (max-width: 480px) {
+    #left-panel {
+    	position: static;
+    	height: auto;
+    	width: 100%;
+    	/*
+    	position: absolute;
+    	height: 15%;
+    	
+    	*/
+    }
+}
 	/* BEGIN: Stats */
 	#section-stats {
 		
@@ -78,7 +90,12 @@ button:visited {
 			padding-left: 20px;
 			padding-right: 20px;
 		}
-		
+		@media screen and (max-width: 480px) {
+			#section-stats .jumbotron {
+				padding: 10px;
+				margin-bottom: 10px;
+			}
+		}
 		#section-stats .roster-container {
 			padding-top: 30px;
 		}
@@ -102,12 +119,31 @@ button:visited {
 	right: 0;
 	background-color: #eee;
 }
+@media screen and (max-width: 480px) {
+	#right-panel.not-fixed {
+		position: relative;
+    	width: 100%;
+		/*
+		height: auto;
+    	
+		
+		top: 17%;
+		height: 83%;
+		width: 100%;
+		*/
+	}
+}
 #right-panel .section {
 	position: absolute;
 	height: 100%;
 	width: 100%;
 	top: 0;
 	overflow: hidden;
+}
+@media screen and (max-width: 480px) {
+	#right-panel.not-fixed .section {
+		/*position: relative;*/
+	}
 }
 #right-panel .section .jumbotron {
 	padding: 0px;
@@ -117,6 +153,11 @@ button:visited {
 	#section-instruction.section {
 		display: block;
 		overflow: auto;
+	}
+	@media screen and (max-width: 480px) {
+		#section-instruction.section {
+			overflow: visible;
+		}
 	}
 		#section-instruction .container {
 			text-align: center;

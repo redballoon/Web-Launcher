@@ -12,6 +12,8 @@ jQuery(function ($) {
 	var $roster = $sidebar.find('.roster');
 	var $roster_template = $roster.find('.template');
 	var $window = $(window);
+	var is_mobile = (/iphone|ipod|android|blackberry|mini|windows\sce|palm/i.test(navigator.userAgent.toLowerCase()));
+	var is_ipad = (/ipad/i.test(navigator.userAgent.toLowerCase()));
 	
 	var socket = null;
 	var state = {
@@ -112,7 +114,19 @@ jQuery(function ($) {
 	};
 	
 	// events
+	if (!is_mobile) {
+		$window.on('scroll', function () {
+			console.log($window.scrollTop() >= $carousel.offset().top);
+			if ($window.scrollTop() >= $carousel.offset().top) {
+				$carousel.removeClass('not-fixed');
+			} else {
+				$carousel.addClass('not-fixed');
+			}
+		});			
+	}
 	$window.on('resize', function () {
+		
+		//if (!is_mobile) 
 		$carousel.find('.carousel_wrapper').height($window.height());
 		
 		var $target = $section_intro.find('.wrapper');
@@ -224,7 +238,8 @@ jQuery(function ($) {
 		});
 	});
 	
-	
+	FastClick.attach(document.body);
+	 
 	// init carousel
 	$carousel.simpleCarousel({ dot_pagination : false });
 	
