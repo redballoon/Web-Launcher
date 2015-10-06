@@ -68,6 +68,9 @@ var methods = {
 				return;
 			}
 			
+			// announce that you removed someone
+			io.emit('removed', { 'name' : socket_map[id].name, 'uid' : socket_map[id].uid });
+			
 			// remove socket
 			delete socket_map[id];
 			
@@ -75,8 +78,6 @@ var methods = {
 			if (current_king === id) {
 				methods.next_king();
 			}
-			
-			// announce that you removed someone
 		});
 		
 		socket.on('register', function (data) {
@@ -108,12 +109,16 @@ var methods = {
 	fetch_king : function () {
 		var next_id = '';
 		
+		if (options.debug) console.log('fetch_king: socket queue length', socket_queue.length);
+		
 		// search for the next king of the hill
 		for (var i = 0; i < socket_queue.length; i++) {
 			var id = socket_queue.shift();
 			
+			if (options.debug) console.log('fetch_king:', id);
+			
 			// king still exists
-			if (socket_map[id] !== 'undefined') {
+			if (typeof socket_map[id] !== 'undefined' && typeof socket_map[id].socket !== 'undefined') {
 				next_id = id;
 				break;
 			}
@@ -151,7 +156,8 @@ var methods = {
 		// log
 		if (options.debug) console.log('next_king:', next_id);
 		
-		if (socket_map[next_id] === 'undefined') {
+		// temp : remove since its redundant
+		if (typeof socket_map[next_id] === 'undefined') {
 			if (options.debug) console.log('next_king: somehow lost socket');
 			current_king = '';
 			// launcher
@@ -186,10 +192,17 @@ var methods = {
 	},
 	demote : function (socket, cause) {
 		cause = !cause ? 0 : cause;
+		
+		var data = { 'name' : socket_map[socket.id].name, 'uid' : socket_map[socket.id].uid };
+		
 		socket.emit('demoted', { code : cause });
+		
 		// remove socket
 		delete socket_map[socket.id];
-		socket.disconnect();
+		socket.disconnect(true);
+		
+		// announce that you removed someone
+		io.emit('removed', data);
 	},
 	move : function (cmd) {
 		launcher.move(cmd, options.move_rate);
@@ -201,7 +214,7 @@ app.get('/stats', function (req, res) {
 	var count = 0;
 	for (var i = 0; i < socket_queue.length; i++) {
 		var id = socket_queue[i];
-		if (socket_map[id] !== 'undefined') {
+		if (typeof socket_map[id] !== 'undefined') {
 			count++;
 		}
 	}

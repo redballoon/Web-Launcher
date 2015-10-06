@@ -59,7 +59,8 @@ jQuery(function ($) {
 				}				
 				$roster.append($entry);
 				
-				methods.update_count(true);
+				//methods.update_count(true);
+				methods.poll_users();
 			})
 			.on('removed', function (data) {
 				console.log('event: removed:', data);
@@ -68,7 +69,8 @@ jQuery(function ($) {
 					return;
 				}
 				$roster.find('#' + data.uid).remove();
-				methods.update_count(false);
+				//methods.update_count(false);
+				methods.poll_users();
 			})
 			.on('announce', function (name) {
 				console.log('event: announcement:', name);
