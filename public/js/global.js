@@ -1,19 +1,34 @@
 jQuery(function ($) {
 	
+	var debug = true,
+		is_mobile = (/iphone|ipod|android|blackberry|mini|windows\sce|palm/i.test(navigator.userAgent.toLowerCase())),
+		is_ipad = (/ipad/i.test(navigator.userAgent.toLowerCase())),
+		$window = $(window),
+		$body = $('body');
+	
 	// DOM
 	var $carousel = $('.carousel');
 	var $section_instructions = $('#section-instruction');
 	var $section_intro = $('#section-intro');
 	var $section_interface = $('#section-interface');
-	
+	var $modal_container = $('#modal_container');
+	var $modals = $modal_container.find('.modal-q');
 	var $controls_container = $section_interface.find('.controls-container');
 	var $sidebar = $('#section-stats');
 	var $total_users = $sidebar.find('.total_users');
 	var $roster = $sidebar.find('.roster');
 	var $roster_template = $roster.find('.template');
-	var $window = $(window);
-	var is_mobile = (/iphone|ipod|android|blackberry|mini|windows\sce|palm/i.test(navigator.userAgent.toLowerCase()));
-	var is_ipad = (/ipad/i.test(navigator.userAgent.toLowerCase()));
+	
+	// to-do: use this object instad
+	var options = {
+		socket : null,
+		state : {
+			level : 0,
+			paused : false
+		},
+		level_set : [$section_instructions, $section_intro, $section_interface],
+		uid : 'uid-' + Math.floor(Math.random() * 100) + '-' + (new Date()).getTime()
+	};
 	
 	var socket = null;
 	var state = {
@@ -21,17 +36,16 @@ jQuery(function ($) {
 		paused : false
 	};
 	var level_set = [$section_instructions, $section_intro, $section_interface];
-	var user = {};
 	var uid = 'uid-' + Math.floor(Math.random() * 100) + '-' + (new Date()).getTime();
-	
+	var user = {};
 	
 	
 	var methods = {
+		// initiate socket
 		init_socket : function () {
 			socket = io();
 			
-			socket
-			.emit('register', { 'name' : user.name, 'uid' : uid })
+			socket.emit('register', { 'name' : user.name, 'uid' : uid })
 			
 			// todo: move these to methods object
 			.on('roster', function (data) {
@@ -85,17 +99,21 @@ jQuery(function ($) {
 			});
 			
 		},
-		send : function (cmd) {
-			// send command
-			cmd = $.trim(cmd.toLowerCase());
-			if (cmd !== 'fire') {
-				socket.emit('move', cmd);
-				return;
-			}
+		// update roster of users
+		update_roster : function (data) {
+		},
+		// add user to roster
+		user_added : function (data) {
+		},
+		// remove user from roster
+		user_removed : function (data) {
+		},
+		// promoted/demoted current user
+		update_status : function (data) {
 		},
 		highlight_user : function () {
-		
 		},
+		// tally users online & render
 		update_count : function (val) {
 			if (typeof val === 'number') {
 				$total_users.text(val);
@@ -107,15 +125,26 @@ jQuery(function ($) {
 				total = total + val;
 				$total_users.text(total);
 		},
+		// fetch amount of users online
 		poll_users : function () {
 			$.get('stats', function (data) {
 				console.log('poll_users:', data);
 				$total_users.text(data.total);
 			});
+		},
+		// send a command to server
+		send : function (cmd) {
+			cmd = $.trim(cmd.toLowerCase());
+			if (cmd !== 'fire') {
+				socket.emit('move', cmd);
+				return;
+			}
 		}
 	};
 	
+	////////////////////////////////
 	// events
+	////////////////////////////////
 	if (!is_mobile) {
 		$window.on('scroll', function () {
 			console.log($window.scrollTop() >= $carousel.offset().top);
@@ -126,17 +155,94 @@ jQuery(function ($) {
 			}
 		});			
 	}
+	
 	$window.on('resize', function () {
-		
 		//if (!is_mobile) 
 		$carousel.find('.carousel_wrapper').height($window.height());
 		
+		// center section text
 		var $target = $section_intro.find('.wrapper');
 		if ($target.length) {
 			$target.css('margin-top', -1 * ($target.height() / 2));
 		}
+		
+		$modal_container.trigger('center.modalq');
 	}).trigger('resize');
 	
+	// setup modal
+	$modal_container
+	.on('center.modalq', function (e, target, callback) {
+		if (debug) console.log('modal: center');
+		
+		// center modal text
+		var $target = $modals.filter('.active');
+		if (!$target.length) {
+			if (debug) console.log('modal: center: target not found');
+			return;
+		}
+		$modal_container.css({ 'display' : 'block', 'opacity' : 0 });
+		$target.css({
+			'top' : ($window.height() - $target.height()) / 2,
+			'left' : ($window.width() - $target.width()) / 2
+		});
+		$modal_container.css({ 'display' : '', 'opacity' : 1 });
+	})
+	.on('open.modalq', function (e, target, callback) {
+		if (debug) console.log('modal: open');
+		
+		if (!target) {
+			if (debug) console.log('modal: open: invalid target');
+			return;
+		}
+		if ($modal_container.hasClass('transition')) {
+			if (debug) console.log('modal: open: not available');
+			return;
+		}
+		
+		var $target = typeof target === 'string' ? $(target) : target;
+		if (!$target.length) {
+			if (debug) console.log('modal: open: target not found');
+			return;
+		}
+		$target.addClass('active').siblings().removeClass('active');
+		$modal_container.addClass('transition');
+		$modal_container.trigger('will_open');
+		$modal_container.fadeIn(800, function () {
+			$modal_container.removeClass('transition');
+			$modal_container.trigger('did_open');
+			if (typeof callback === 'function') callback();
+		});
+	})
+	.on('close.modalq', function (callback) {
+		if (debug) console.log('modal: close');
+		
+		if ($modal_container.hasClass('transition')) {
+			if (debug) console.log('modal: close: not available');
+			return;
+		}
+		
+		var $target = $modals.filter('.active');
+		if (!$target.length) {
+			if (debug) console.log('modal: close: target not found');
+			return;
+		}
+		
+		$modal_container.addClass('transition');
+		$modal_container.trigger('will_close');
+		$modal_container.fadeOut(800, function () {
+			$modal_container.removeClass('transition');
+			$target.removeClass('active');
+			$modal_container.trigger('did_close');
+			if (typeof callback === 'function') callback();
+		});
+		
+	})
+	.on('will_open.modalq', function () {
+		if (debug) console.log('modal: will open');
+		$modal_container.trigger('center.modalq');
+	});
+	
+	// configure carousel animations
 	$carousel
 	.on('after_animation', function (e, flag) {
 		//console.log('event: before_animation:');
@@ -150,9 +256,12 @@ jQuery(function ($) {
 			level_set[state.level].trigger('section_load');
 		}
 	});
+	////////////////////////////////
 	
 	
-	
+	////////////////////////////////
+	// Sections
+	////////////////////////////////
 	
 	// section - instructions
 	$section_instructions.on('section_load', function () {
@@ -239,15 +348,15 @@ jQuery(function ($) {
 			methods.send(cmd);
 		});
 	});
+	////////////////////////////////
 	
 	FastClick.attach(document.body);
 	 
 	// init carousel
 	$carousel.simpleCarousel({ dot_pagination : false });
-	
+	// initial poll for online users
 	methods.poll_users();
-	
-	// kickoff section
+	// kickoff first section
 	level_set[state.level].trigger('section_load');
 	
 });
