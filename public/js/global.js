@@ -18,34 +18,35 @@ jQuery(function ($) {
 	var $total_users = $sidebar.find('.total_users');
 	var $roster = $sidebar.find('.roster');
 	var $roster_template = $roster.find('.template');
+	var $timer = $sidebar.find('.timer');
 	
-	// to-do: use this object instad
 	var options = {
 		socket : null,
 		state : {
 			level : 0,
 			paused : false
 		},
+		uid : 'uid-' + Math.floor(Math.random() * 100) + '-' + (new Date()).getTime(),
 		level_set : [$section_instructions, $section_intro, $section_interface],
-		uid : 'uid-' + Math.floor(Math.random() * 100) + '-' + (new Date()).getTime()
+		inactive_default : 60000,//1 minute
+		inactive_delay : 1000,//update every second
+		inactive_count : 0
 	};
-	
-	var socket = null;
-	var state = {
-		level : 0,
-		paused : false
-	};
-	var level_set = [$section_instructions, $section_intro, $section_interface];
-	var uid = 'uid-' + Math.floor(Math.random() * 100) + '-' + (new Date()).getTime();
 	var user = {};
+	var inactive_timer = null;
+	
+	
+	// to-do:
+	// add yellow hud notification so its less intrusive than the modal(e.g reload)
+	
 	
 	
 	var methods = {
 		// initiate socket
 		init_socket : function () {
-			socket = io();
+			options.socket = io();
 			
-			socket.emit('register', { 'name' : user.name, 'uid' : uid })
+			options.socket.emit('register', { 'name' : user.name, 'uid' : options.uid })
 			
 			// todo: move these to methods object
 			.on('roster', function (data) {
@@ -68,7 +69,7 @@ jQuery(function ($) {
 				}
 				var $entry = $roster_template.clone().removeClass('template');
 					$entry.attr('id', data.uid).text(data.name);
-				if (data.uid === uid) {
+				if (data.uid === options.uid) {
 					$entry.addClass('self');
 				}				
 				$roster.append($entry);
@@ -92,10 +93,13 @@ jQuery(function ($) {
 			.on('promoted', function () {
 				console.log('event: promoted:');
 				$section_interface.addClass('on');
+				options.inactive_count = options.inactive_default;
+				methods.start_timer();
 			})
 			.on('demoted', function (data) {
 				console.log('event: demoted:', data.code);
 				$section_interface.removeClass('on');
+				methods.stop_timer();
 				
 				// timeout
 				if (data.code === 0) {
@@ -103,7 +107,7 @@ jQuery(function ($) {
 					.one('click', function (e) {
 						e.preventDefault();
 						location.reload();
-					})
+					});
 					$modal_container.trigger('open', '#modal_dropped');
 				}
 			});
@@ -129,11 +133,15 @@ jQuery(function ($) {
 				$total_users.text(val);
 				return;
 			}
-			var val = val ? 1 : -1;
+			val = val ? 1 : -1;
+			
 			var total = parseInt($total_users.text(), 10);
 				total = isNaN(total) ? 0 : total;
 				total = total + val;
 				$total_users.text(total);
+		},
+		update_timer : function () {
+			$timer.text(options.inactive_count / 1000);
 		},
 		// fetch amount of users online
 		poll_users : function () {
@@ -142,13 +150,25 @@ jQuery(function ($) {
 				$total_users.text(data.total);
 			});
 		},
+		start_timer : function () {
+			methods.stop_timer();
+			inactive_timer = setInterval(function () {
+				options.inactive_count = options.inactive_count - options.inactive_delay;
+				options.inactive_count = options.inactive_count < 0 ? 0 : options.inactive_count;
+				methods.update_timer();
+			}, options.inactive_delay);
+		},
+		stop_timer : function () {
+			if (inactive_timer !== null) {
+				clearInterval(inactive_timer);
+			}
+		},
 		// send a command to server
 		send : function (cmd) {
 			cmd = $.trim(cmd.toLowerCase());
-			if (cmd !== 'fire') {
-				socket.emit('move', cmd);
-				return;
-			}
+			options.socket.emit('move', cmd);
+			options.inactive_count = options.inactive_default;
+			methods.update_timer();
 		}
 	};
 	
@@ -279,7 +299,7 @@ jQuery(function ($) {
 	.on('animation_complete', function (e, flag) {
 		//console.log('event: animation_complete:');
 		if (flag === 'show') {
-			level_set[state.level].trigger('section_load');
+			options.level_set[options.state.level].trigger('section_load');
 		}
 	});
 	////////////////////////////////
@@ -293,7 +313,7 @@ jQuery(function ($) {
 	$section_instructions.on('section_load', function () {
 		console.log('section_load: instructions');
 		
-		if (state.level !== 0) {
+		if (options.state.level !== 0) {
 			console.log('section-instruction: not valid state');
 			return;
 		}
@@ -301,7 +321,7 @@ jQuery(function ($) {
 		$section_instructions.find('.next-btn')
 		.one('click', function (e) {
 			console.log('section-instruction: next');
-			state.level++;
+			options.state.level++;
 			$carousel.simpleCarousel('next');
 		});
 	});
@@ -310,7 +330,7 @@ jQuery(function ($) {
 	$section_intro.on('section_load', function () {
 		console.log('section_load: intro');
 		
-		if (state.level !== 1) {
+		if (options.state.level !== 1) {
 			console.log('section-intro: not valid state');
 			return;
 		}
@@ -319,7 +339,7 @@ jQuery(function ($) {
 		.on('submit', function (e) {
 			e.preventDefault();
 			
-			if (state.level !== 1) {
+			if (options.state.level !== 1) {
 				console.log('section-intro: not valid state');
 				return;
 			}
@@ -331,7 +351,7 @@ jQuery(function ($) {
 				return;
 			}
 			
-			state.level++;
+			options.state.level++;
 			user.name = name;
 			$section_intro.addClass('disabled');
 			
@@ -344,21 +364,21 @@ jQuery(function ($) {
 	$section_interface.on('section_load', function () {
 		console.log('section_load: interface');
 		
-		if (state.level !== 2) {
+		if (options.state.level !== 2) {
 			console.log('section-interface: not valid state');
 			return;
 		}
 		
 		$controls_container.find('button')
 		.on('click', function () {
-			if (state.level !== 2) {
+			if (options.state.level !== 2) {
 				console.log('section-interface: not valid state');
 				return;
 			}
 		
 			var $this = $(this);
 			
-			if (!socket) {
+			if (!options.socket) {
 				console.log('section-interface: app not initiated');
 				return;
 			}
@@ -383,6 +403,6 @@ jQuery(function ($) {
 	// initial poll for online users
 	methods.poll_users();
 	// kickoff first section
-	level_set[state.level].trigger('section_load');
+	options.level_set[options.state.level].trigger('section_load');
 	
 });

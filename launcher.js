@@ -237,11 +237,12 @@ module.exports = {
 		}
 		methods.trigger(cmd, value);
 	},
-	fire : function () {
+	fire : function (repeat) {
 		if (!options.state.online) {
 			console.log('launcher: fire: must be on');
 			return;
 		}
+		methods.trigger('fire', repeat);
 	}
 };
 

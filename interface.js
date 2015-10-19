@@ -27,9 +27,16 @@ var options = {
 	debug : true,
 	port : 3000,
 	move_rate : 500,
-	status : {
+	// max shots a user is allowed on their turn
+	shot_per_user : 4,
+	// max ammo on rocket launcher
+	max_ammo : 4,
+	// track ammo left before requiring reload
+	ammo_count : 0,
+	state : {
 		transition : false,
-		sleep : false
+		sleep : false,
+		reload : false
 	}
 };
 var server;
@@ -40,14 +47,26 @@ var current_king = '';
 var inactive_timer = null;
 var inactive_delay = 60000;//1 min
 
+
+options.ammo_count = options.max_ammo;
+
+// to-dos:
+// add reload event
+// add arcade reload sound
+// test kicking a user off after they fire
+// add a pause
+// shutdown should empty out queue
+// if shot_per_user is going to kick off a user then next_king should be called on reload instead of
+//	reset timer
+
 var methods = {
-	inactive : function () {
+	inactive : function (cause) {
 		if (options.debug) console.log('inactive: timer up');
 		if (!current_king) {
 			if (options.debug) console.log('inactive: no king set');
 			return;
 		}
-		methods.demote(socket_map[current_king].socket);
+		methods.demote(socket_map[current_king].socket, cause);
 		methods.next_king();
 	},
 	reset_timer : function () {
@@ -59,8 +78,14 @@ var methods = {
 		}
 		inactive_timer = setTimeout(function () {
 			inactive_timer = null;
-			methods.inactive();
+			methods.inactive(0);
 		}, inactive_delay);
+	},
+	stop_timer : function () {
+		if (inactive_timer) {
+			clearTimeout(inactive_timer);
+			inactive_timer = null;
+		}
 	},
 	prepare : function (socket) {
 		var id = socket.id;
@@ -97,7 +122,7 @@ var methods = {
 			}
 			
 			// add socket
-			socket_map[id] = { 'name' : data.name, 'socket' : socket, 'uid' : data.uid };
+			socket_map[id] = { 'name' : data.name, 'socket' : socket, 'uid' : data.uid, 'ammo' : options.shot_per_user };
 			socket_queue.push(id);
 			
 			// send roster
@@ -134,8 +159,13 @@ var methods = {
 		if (options.debug) console.log('next_king:');
 		
 		
-		if (options.transition) {
+		if (options.state.transition) {
 			if (options.debug) console.log('next_king: already waiting');
+			return;
+		}
+		if (options.state.reload) {
+			if (options.debug) console.log('next_king: waiting for reload');
+			methods.stop_timer();
 			return;
 		}
 		
@@ -143,10 +173,10 @@ var methods = {
 		// launcher might still be moving from previous commands
 		if (state.transition || state.firing) {
 			if (options.debug) console.log('next_king: launcher is busy');
-			options.transition = true;
+			options.state.transition = true;
 			launcher.cancel(function () {
 				if (options.debug) console.log('next_king: cancel callback');
-				options.transition = false;
+				options.state.transition = false;
 				methods.next_king();
 			});
 			return;
@@ -175,21 +205,63 @@ var methods = {
 		
 		// bind events to new king
 		var socket = socket_map[next_id].socket;
-		// must be unbinded on demoted
 		socket.on('move', function (data) {
+			// check user is still king of the hill
 			if (socket.id !== current_king) {
 				if (options.debug) console.log('event: move: not a valid king', socket.id, current_king);
 				return;
 			}
+			// log
 			if (options.debug) console.log('event: move', data);
+			
 			// reset inactive timer
 			methods.reset_timer();
-			// don't add commands to the launcher queue if its doing a 'firing' sequence
+			// don't add commands to the launcher queue
+			// if its doing a 'firing' sequence
 			if ((launcher.state()).firing) {
 				if (options.debug) console.log('event: move: launcher currently firing. abort');
 				return;
 			}
-			methods.move(data);
+			
+			// movement sequence
+			if (data !== 'fire') {
+				methods.move(data);
+				return;
+			}
+			
+			// fire sequence
+			// temp
+			return;
+			
+			// check if launcher can fire
+			// should not be able to hit this point if other parts are working properly
+			if (options.ammo_count === 0) {
+				if (options.debug) console.log('event: move: Error: attempt to fire when launcher is out of ammo');
+			}
+			
+			
+			// check if user can fire
+			var user_shots_left = socket_map[current_king].ammo;
+			if (user_shots_left <= 0) {
+				if (options.debug) console.log('event: move: user has no more shots left');
+				return;
+			}
+			socket_map[current_king].ammo = user_shots_left - 1;
+			options.ammo_count--;
+			
+			methods.fire();
+			
+			// reload notification
+			if (options.ammo_count === 0) {
+				if (options.debug) console.log('event: move: launcher needs to reload');
+				options.state.reload = true;
+				socket.emit('reloading', true);
+			}
+			
+			// kick off user if he can no longer fire
+			if (options.ammo_count === 0) {
+				//methods.inactive(1);
+			}
 		});
 		
 		current_king = next_id;
@@ -223,6 +295,9 @@ var methods = {
 	},
 	move : function (cmd) {
 		launcher.move(cmd, options.move_rate);
+	},
+	fire : function () {
+		launcher.fire(1);
 	}
 };
 
@@ -245,7 +320,13 @@ app.get('/stats', function (req, res) {
 	res.send({ total : count });
 });
 app.get('/shutdown', function (req, res) {
-	// close hardware
+	current_king = '';
+	launcher.off();
+});
+app.get('/reload', function (req, res) {
+	options.state.reload = false;
+	options.ammo_count = options.max_ammo;
+	socket.emit('reloaded', true);
 });
 
 // init socket
