@@ -4,6 +4,7 @@
   "description": "lorem ipsum",
   "devDependencies": {
     "connect": "^3.4.0",
+    "domain": "0.0.1",
     "express": "^4.13.3",
     "http": "0.0.0",
     "socket.io": "^1.3.7",

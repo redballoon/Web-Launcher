@@ -1,10 +1,9 @@
 var HID = require('./node-hid/');
-var devices = HID.devices();
-
+var device = require('./detect-device');
 var options = {
 	debug : false,
 	// update - depends on the machine
-	usb_path : 'USB_2123_1010_fd131200',
+	usb_path : device,//USB_2123_1010_fd131200
 	// delay before firing
 	stabalize_delay : 1000,
 	// delay after firing
@@ -13,6 +12,7 @@ var options = {
 	reset_down_delay : 2000,
 	state : {
 		transition : false,
+		firing : false,
 		online : false
 	}
 };
@@ -110,7 +110,8 @@ var methods = {
 			return;
 		}
 		
-		// fire launcher	
+		// fire launcher
+		options.state.firing = true;
 			// normalize
 		value = value < 1 ? 1 : value;
 		value = value > 4 ? 4 : value;
@@ -121,6 +122,9 @@ var methods = {
 			this.add(fire_fn);
 			this.sleep(options.fire_delay);
 		}
+		this.add(function () {
+			options.state.firing = false;
+		});
 	},
 	trigger : function (cmd, value) {
 		if (options.debug) console.log('trigger:', cmd);
@@ -151,6 +155,11 @@ var methods = {
 };
 
 // initialize HID
+if (!options.usb_path) {
+	console.log('error: launcher was not found');
+	module.exports = false;
+	return;
+}
 launcher = new HID.HID(options.usb_path);
 // setup HID events
 launcher
@@ -183,6 +192,9 @@ methods.test_1 = function () {
 }
 
 module.exports = {
+	state : function () {
+		return options.state;
+	},
 	busy : function () {
 		return options.state.transition;
 	},

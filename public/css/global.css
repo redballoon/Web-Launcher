@@ -18,6 +18,8 @@ button {
 	-ms-user-select: none;
 	outline: none;
 }
+button,
+button:hover,
 button:visited {
 	outline: none;
 }
@@ -161,6 +163,16 @@ button:visited {
 	@media screen and (max-width: 480px) {
 		#section-instruction.section {
 			overflow: visible;
+			font-size: 60%;
+		}
+		#section-instruction .container h2 {
+			font-size: 25px;
+		}
+		#section-instruction .container h3 {
+			font-size: 16px;
+		}
+		#section-instruction .container p {
+			font-size: 14px;
 		}
 	}
 		#section-instruction .container {
@@ -170,6 +182,7 @@ button:visited {
 		#section-instruction .next-wrapper {
 			max-width: 80%;
 			margin: 0 auto;
+			padding: 10px 0;
 		}
 	
 	/* BEGIN: Intro */

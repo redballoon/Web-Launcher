@@ -96,6 +96,16 @@ jQuery(function ($) {
 			.on('demoted', function (data) {
 				console.log('event: demoted:', data.code);
 				$section_interface.removeClass('on');
+				
+				// timeout
+				if (data.code === 0) {
+					$modal_container.find('.close_btn')
+					.one('click', function (e) {
+						e.preventDefault();
+						location.reload();
+					})
+					$modal_container.trigger('open', '#modal_dropped');
+				}
 			});
 			
 		},
@@ -157,8 +167,18 @@ jQuery(function ($) {
 	}
 	
 	$window.on('resize', function () {
-		//if (!is_mobile) 
-		$carousel.find('.carousel_wrapper').height($window.height());
+		var carousel_height = $window.height();
+		if (is_mobile) {
+			$.each($carousel.find('.carousel_slide'), function () {
+				var $slide = $(this);
+				var slide_height = $slide.find('.wrapper').height();
+				if (slide_height > carousel_height) {
+					carousel_height = slide_height;
+				}
+			});
+		}
+		$carousel.find('.carousel_wrapper').height(carousel_height);
+		
 		
 		// center section text
 		var $target = $section_intro.find('.wrapper');
@@ -240,6 +260,12 @@ jQuery(function ($) {
 	.on('will_open.modalq', function () {
 		if (debug) console.log('modal: will open');
 		$modal_container.trigger('center.modalq');
+	});
+	
+	$modal_container.find('.close_btn')
+	.on('click', function (e) {
+		e.preventDefault();
+		$modal_container.trigger('close');
 	});
 	
 	// configure carousel animations
@@ -353,7 +379,7 @@ jQuery(function ($) {
 	FastClick.attach(document.body);
 	 
 	// init carousel
-	$carousel.simpleCarousel({ dot_pagination : false });
+	$carousel.simpleCarousel({ dot_pagination : false, speed : 0.5 });
 	// initial poll for online users
 	methods.poll_users();
 	// kickoff first section
