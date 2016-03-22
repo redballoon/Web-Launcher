@@ -28,7 +28,7 @@ jQuery(function ($) {
 		},
 		uid : 'uid-' + Math.floor(Math.random() * 100) + '-' + (new Date()).getTime(),
 		level_set : [$section_instructions, $section_intro, $section_interface],
-		inactive_default : 60000,//1 minute
+		inactive_default : 30000,////60000,//1 minute
 		inactive_delay : 1000,//update every second
 		inactive_count : 0
 	};
@@ -40,7 +40,9 @@ jQuery(function ($) {
 	// add yellow hud notification so its less intrusive than the modal(e.g reload)
 	
 	
-	
+	////////////////////////////////
+	// methods
+	////////////////////////////////
 	var methods = {
 		// initiate socket
 		init_socket : function () {
@@ -48,7 +50,10 @@ jQuery(function ($) {
 			
 			options.socket.emit('register', { 'name' : user.name, 'uid' : options.uid })
 			
+			// server events
 			// todo: move these to methods object
+			
+			// roster of connnected clients
 			.on('roster', function (data) {
 				console.log('event: roster:', data);
 				if (!data || !data.list) {
@@ -177,7 +182,7 @@ jQuery(function ($) {
 	////////////////////////////////
 	if (!is_mobile) {
 		$window.on('scroll', function () {
-			console.log($window.scrollTop() >= $carousel.offset().top);
+			//console.log($window.scrollTop() >= $carousel.offset().top);
 			if ($window.scrollTop() >= $carousel.offset().top) {
 				$carousel.removeClass('not-fixed');
 			} else {
@@ -185,7 +190,6 @@ jQuery(function ($) {
 			}
 		});			
 	}
-	
 	$window.on('resize', function () {
 		var carousel_height = $window.height();
 		if (is_mobile) {
@@ -326,7 +330,7 @@ jQuery(function ($) {
 		});
 	});
 	
-	// section - register
+	// section - register & connect to server
 	$section_intro.on('section_load', function () {
 		console.log('section_load: intro');
 		
@@ -357,6 +361,7 @@ jQuery(function ($) {
 			
 			$carousel.simpleCarousel('next');
 			
+			// connect to server
 			methods.init_socket();
 		});
 	});
@@ -404,5 +409,4 @@ jQuery(function ($) {
 	methods.poll_users();
 	// kickoff first section
 	options.level_set[options.state.level].trigger('section_load');
-	
 });

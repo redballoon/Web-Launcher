@@ -1,20 +1,3 @@
-// temp
-/*{
-	busy : function () {
-		return false;
-	},
-	on : function () {
-	},
-	off : function () {
-	},
-	cancel : function (callback) {
-	},
-	move : function (cmd, value) {
-	},
-	fire : function () {
-	}
-};//
-*/
 var launcher = require('./launcher');
 var express = require('express');
 var app = express();
@@ -28,7 +11,7 @@ var options = {
 	port : 3000,
 	move_rate : 500,
 	// max shots a user is allowed on their turn
-	shot_per_user : 4,
+	shot_per_user : 1,
 	// max ammo on rocket launcher
 	max_ammo : 4,
 	// track ammo left before requiring reload
@@ -45,7 +28,11 @@ var socket_map = {};
 var socket_queue = [];
 var current_king = '';
 var inactive_timer = null;
-var inactive_delay = 60000;//1 min
+var inactive_delay = 30000;//1 min
+
+// queue up user interactions
+// so we can inject things like 'reset'
+var interface_stack = [];
 
 
 options.ammo_count = options.max_ammo;
@@ -60,6 +47,43 @@ options.ammo_count = options.max_ammo;
 //	reset timer
 
 var methods = {
+	///////////////////
+	// Queue commands: move to a modular structure
+	///////////////////
+	dequeue : function () {
+		// unavailable
+		if (options.state.transition) {
+			return;
+		}
+		options.state.transition = true;
+		
+		var next = function () {
+			if (!command_stack.length) {
+				if (options.debug) console.log('next: stack is empty');
+				options.state.transition = false;
+				return;
+			}
+			var fn = command_stack.shift();
+			if (options.debug) console.log('next: checking stack');
+			fn.call(null, next);
+		};
+		next();
+	},
+	sleep : function (delay) {
+		command_stack.push(function (next) {
+			if (options.debug) console.log('sleep:');
+			setTimeout(function () {
+				next();
+			}, delay);
+		});
+	},
+	add : function (callback) {
+		command_stack.push(function (next) {
+			callback();
+			next();
+		});
+	},
+	///////////////////
 	inactive : function (cause) {
 		if (options.debug) console.log('inactive: timer up');
 		if (!current_king) {
@@ -87,50 +111,58 @@ var methods = {
 			inactive_timer = null;
 		}
 	},
+	/*
+	*	prepare
+	*	when a client connects to the server for the first time,
+	*	prepare the connection
+	*/
 	prepare : function (socket) {
 		var id = socket.id;
 		
+		// client disconnected from server
 		socket.on('disconnect', function () {
 			if (options.debug) console.log('event: disconnection', id, arguments);
 			
+			// we can't find record of client
+			// todo: log this
 			if (typeof socket_map[id] === 'undefined') {
 				if (options.debug) console.log('user never registered');
 				return;
 			}
-			
-			// announce that you removed someone
+			// announce to all other connected clients
+			// that you removed someone
 			io.emit('removed', { 'name' : socket_map[id].name, 'uid' : socket_map[id].uid });
 			
-			// remove socket
+			// remove record of client
 			delete socket_map[id];
 			
-			// socket was also king of the hill
+			// removed client was the king of the hill,
+			// get the next client on the queue
 			if (current_king === id) {
 				methods.next_king();
 			}
 		});
-		
+		// client is registering itself
 		socket.on('register', function (data) {
 			if (options.debug) console.log('event: register');
 			
-			// build current roster
+			// make roster of currently connected clients
 			var list = [];
 			for (var key in socket_map) {
 				if (socket_map.hasOwnProperty(key)) {
 					list.push({ 'name' : socket_map[key].name, 'uid' : socket_map[key].uid });
 				}
 			}
-			
-			// add socket
+			// add record of client
 			socket_map[id] = { 'name' : data.name, 'socket' : socket, 'uid' : data.uid, 'ammo' : options.shot_per_user };
 			socket_queue.push(id);
-			
-			// send roster
+			// send roster to registering client
 			socket.emit('roster', { 'list' : list });
-			// announce new entry
+			// announce new connected client to all other clients
 			io.emit('added', { 'name' : data.name, 'uid' : data.uid });
 			
-			// no king of the hill
+			// currently no king of the hill,
+			// get the next client on the queue
 			if (!current_king) {
 				methods.next_king();
 			}
@@ -169,8 +201,8 @@ var methods = {
 			return;
 		}
 		
-		var state = launcher.state();
 		// launcher might still be moving from previous commands
+		var state = launcher.state();
 		if (state.transition || state.firing) {
 			if (options.debug) console.log('next_king: launcher is busy');
 			options.state.transition = true;
@@ -231,7 +263,7 @@ var methods = {
 			
 			// fire sequence
 			// temp
-			return;
+			//return;
 			
 			// check if launcher can fire
 			// should not be able to hit this point if other parts are working properly
@@ -244,6 +276,11 @@ var methods = {
 			var user_shots_left = socket_map[current_king].ammo;
 			if (user_shots_left <= 0) {
 				if (options.debug) console.log('event: move: user has no more shots left');
+				
+				// temp: kickoff player if they can't shoot
+				methods.inactive(0);
+				
+				
 				return;
 			}
 			socket_map[current_king].ammo = user_shots_left - 1;
@@ -301,6 +338,9 @@ var methods = {
 	}
 };
 
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+
 // check: launcher was found
 if (!launcher) {
 	console.log('error: launcher module failed');
@@ -328,10 +368,16 @@ app.get('/reload', function (req, res) {
 	options.ammo_count = options.max_ammo;
 	socket.emit('reloaded', true);
 });
+app.get('/reset', function (req, res) {
+	console.log('reset');
+	if (launcher) launcher.reset();
+});
 
-// init socket
+
+// someone made a connection to the server
 io.on('connection', function (socket) {
 	if (options.debug) console.log('event: connection', socket.id);
+	// prepare the connection
 	methods.prepare(socket);
 });
 // init server

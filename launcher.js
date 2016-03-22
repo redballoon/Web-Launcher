@@ -189,7 +189,11 @@ methods.test_1 = function () {
 	methods.trigger('up', 540);
 	methods.trigger('fire', 2);
 	methods.trigger('led', 0);
-}
+};
+methods.reset = function () {
+	methods.trigger('left', 6000);
+	methods.trigger('down', 3000);
+};
 
 module.exports = {
 	state : function () {
@@ -243,6 +247,9 @@ module.exports = {
 			return;
 		}
 		methods.trigger('fire', repeat);
+	},
+	reset : function () {
+		methods.reset();
 	}
 };
 
