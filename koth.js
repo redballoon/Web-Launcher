@@ -1,3 +1,14 @@
+/**
+* KingOfTheHill
+*
+* 
+*
+* @version v1.0.0
+* @author Fredi Quirino
+* @link 
+*/
+var path = require('path');
+
 var TinyStack = require('./tinyStack');
 var launcher = require('./launcher');
 var express = require('express');
@@ -9,14 +20,6 @@ var domain = require('domain');
 
 var options = {
 	debug : true,
-	port : 3000,
-	move_rate : 500,
-	// max shots a user is allowed on their turn
-	shot_per_user : 1,
-	// max ammo on rocket launcher
-	max_ammo : 4,
-	// track ammo left before requiring reload
-	ammo_count : 0,
 	state : {
 		transition : false,
 		sleep : false,
@@ -31,16 +34,7 @@ var current_king = '';
 var inactive_timer = null;
 var inactive_delay = 30000;//1 min
 
-// queue up user interactions
-// so we can inject things like 'reset'
-var interface_stack = [];
 
-
-options.ammo_count = options.max_ammo;
-
-// to-dos:
-// add reload event
-// add arcade reload sound
 // test kicking a user off after they fire
 // add a pause
 // shutdown should empty out queue
@@ -49,24 +43,12 @@ options.ammo_count = options.max_ammo;
 // 
 // fire events when launcher resets, reloads
 
-/*
-* game 1
-* 1 bullet per connection, reset afterwards
-* e.g (house target practice)
-*/
-/*
-* game 2
-* 1 bullet per connection, no reset
-* e.g (moving target - john, twitch)
-*/
-/*
-* game 3
-* x bullets per connection, reset afterwards, maybe reload
-*/
-
-
 var methods = {
-	///////////////////
+	log : function () {
+		if (!options.debug) return;
+		Array.prototype.splice.call(arguments, 0, 0, path.basename(__filename) + ':');
+		console.log.apply(null, arguments);
+	},
 	inactive : function (cause) {
 		if (options.debug) console.log('inactive: timer up');
 		if (!current_king) {
@@ -75,24 +57,6 @@ var methods = {
 		}
 		methods.dethrone(socket_map[current_king].socket, cause);
 		methods.next_king();
-	},
-	reset_timer : function () {
-		// check for inactivity
-		if (options.debug) console.log('reset_timer');
-		
-		if (inactive_timer) {
-			clearTimeout(inactive_timer);
-		}
-		inactive_timer = setTimeout(function () {
-			inactive_timer = null;
-			methods.inactive(0);
-		}, inactive_delay);
-	},
-	stop_timer : function () {
-		if (inactive_timer) {
-			clearTimeout(inactive_timer);
-			inactive_timer = null;
-		}
 	},
 	/*
 	*	prepare
@@ -151,10 +115,15 @@ var methods = {
 			}
 		});
 	},
+	
+	/////
+	add : function (id) {
+		socket_queue.push(id);
+	},
 	fetch_king : function () {
 		var next_id = '';
 		
-		if (options.debug) console.log('fetch_king: socket queue length', socket_queue.length);
+		methods.log('fetch_king: socket queue length', socket_queue.length);
 		
 		// search for the next king of the hill
 		for (var i = 0; i < socket_queue.length; i++) {
@@ -170,44 +139,20 @@ var methods = {
 		}
 		return next_id;
 	},
-	next_king : function () {
-		if (options.debug) console.log('next_king:');
-		
-		
-		if (options.state.transition) {
-			if (options.debug) console.log('next_king: already waiting');
-			return;
-		}
-		if (options.state.reload) {
-			if (options.debug) console.log('next_king: waiting for reload');
-			methods.stop_timer();
-			return;
-		}
-		
-		// launcher might still be moving from previous commands
-		var state = launcher.state();
-		if (state.transition || state.firing) {
-			if (options.debug) console.log('next_king: launcher is busy');
-			options.state.transition = true;
-			launcher.cancel(function () {
-				if (options.debug) console.log('next_king: cancel callback');
-				options.state.transition = false;
-				methods.next_king();
-			});
-			return;
-		}
+	newKing : function () {
+		methods.log('newKing:');
 		
 		// fetch the socket id of the next person in the queue
 		var next_id = methods.fetch_king();
 		if (!next_id) {
-			if (options.debug) console.log('next_king: no more connections');
+			if (options.debug) console.log('this.options.: no more connections');
 			current_king = '';
 			// launcher
 			launcher.off();
 			return;
 		}
 		// log
-		if (options.debug) console.log('next_king:', next_id);
+		if (options.debug) console.log('this.options.:', next_id);
 		
 		// temp : remove since its redundant
 		//if (typeof socket_map[next_id] === 'undefined') {
@@ -219,6 +164,7 @@ var methods = {
 		//}
 		
 		// bind events to new king
+		/*
 		var socket = socket_map[next_id].socket;
 		socket.on('move', function (data) {
 			// check user is still king of the hill
@@ -283,17 +229,13 @@ var methods = {
 				//methods.inactive(1);
 			}
 		});
+		*/
 		
 		current_king = next_id;
-		methods.reset_timer();
-		methods.announce(socket_map[next_id].name);
 		methods.king(socket);
 		
 		// launcher
 		launcher.on();
-	},
-	announce : function (name) {
-		io.emit('new_king', name);
 	},
 	king : function (socket) {
 		socket.emit('promoted', true);
